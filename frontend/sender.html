@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSA Encryption - Người Gửi</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 RSA Encryption System</h1>
+            <p>Người Gửi</p>
+        </div>
+
+        <nav class="nav">
+            <a href="sender.html" class="active">Người Gửi</a>
+            <a href="receiver.html">Người Nhận</a>
+        </nav>
+
+        <div class="main">
+            <!-- Mã hóa Text -->
+            <section class="section">
+                <h2>📝 Mã hóa Tin nhắn</h2>
+                <div class="form-group">
+                    <label>Tin nhắn:</label>
+                    <textarea id="textMessage" placeholder="Nhập tin nhắn cần mã hóa..."></textarea>
+                </div>
+                <button onclick="encryptText()" class="btn btn-primary">🔒 Mã hóa</button>
+                <div id="textResult"></div>
+            </section>
+
+            <hr>
+
+            <!-- Mã hóa File -->
+            <section class="section">
+                <h2>📁 Mã hóa File</h2>
+                <div class="form-group">
+                    <label>Chọn file:</label>
+                    <input type="file" id="fileInput">
+                </div>
+                <button onclick="encryptFile()" class="btn btn-primary">🔒 Mã hóa File</button>
+                <div id="fileResult"></div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+
+        async function encryptText() {
+            const text = document.getElementById('textMessage').value;
+            if (!text) {
+                alert('Vui lòng nhập tin nhắn');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/encrypt-text`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, recipientName: 'receiver' })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displayTextResult(data);
+                } else {
+                    alert('Lỗi: ' + data.error);
+                }
+            } catch (error) {
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        async function encryptFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) {
+                alert('Vui lòng chọn file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch(`${API_URL}/api/encrypt-file`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displayFileResult(data);
+                } else {
+                    alert('Lỗi: ' + data.error);
+                }
+            } catch (error) {
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        function displayTextResult(data) {
+            const resultDiv = document.getElementById('textResult');
+            resultDiv.innerHTML = `
+                <div class="result success">
+                    <h3>✅ Mã hóa thành công</h3>
+                    <p><strong>Tin nhắn mã hóa:</strong></p>
+                    <textarea readonly>${data.encrypted}</textarea>
+                    <p><strong>Chữ ký:</strong></p>
+                    <textarea readonly>${data.signature}</textarea>
+                    <p><strong>Người gửi:</strong> ${data.senderName}</p>
+                    <button onclick="copyToClipboard('${data.encrypted.replace(/'/g, "\\'").replace(/"/g, '\\"')}', '${data.signature.replace(/'/g, "\\'").replace(/"/g, '\\"')}', '${data.senderName}')" class="btn btn-secondary">📋 Copy để gửi</button>
+                </div>
+            `;
+        }
+
+        function displayFileResult(data) {
+            const resultDiv = document.getElementById('fileResult');
+            resultDiv.innerHTML = `
+                <div class="result success">
+                    <h3>✅ File mã hóa thành công</h3>
+                    <p><strong>Tên file:</strong> ${data.fileName}</p>
+                    <p><strong>File mã hóa:</strong></p>
+                    <textarea readonly>${data.encrypted.substring(0, 100)}...</textarea>
+                    <p><strong>Chữ ký:</strong></p>
+                    <textarea readonly>${data.signature}</textarea>
+                    <p><strong>Người gửi:</strong> ${data.senderName}</p>
+                    <button onclick="copyFileData('${JSON.stringify(data).replace(/'/g, "\\'").replace(/"/g, '\\"')}')" class="btn btn-secondary">📋 Copy JSON</button>
+                </div>
+            `;
+        }
+
+        function copyToClipboard(encrypted, signature, sender) {
+            const data = {
+                encrypted,
+                signature,
+                senderName: sender
+            };
+            navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+            alert('✅ Đã copy vào clipboard');
+        }
+
+        function copyFileData(data) {
+            navigator.clipboard.writeText(data);
+            alert('✅ Đã copy JSON vào clipboard');
+        }
+    </script>
+</body>
+</html>

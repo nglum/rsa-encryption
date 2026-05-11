@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSA Encryption - Người Nhận</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 RSA Encryption System</h1>
+            <p>Người Nhận</p>
+        </div>
+
+        <nav class="nav">
+            <a href="sender.html">Người Gửi</a>
+            <a href="receiver.html" class="active">Người Nhận</a>
+        </nav>
+
+        <div class="main">
+            <!-- Giải mã Text -->
+            <section class="section">
+                <h2>📝 Giải mã Tin nhắn</h2>
+                <div class="form-group">
+                    <label>Tin nhắn mã hóa:</label>
+                    <textarea id="encryptedMessage" placeholder="Dán tin nhắn mã hóa..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Chữ ký:</label>
+                    <textarea id="signature" placeholder="Dán chữ ký..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Người gửi:</label>
+                    <input type="text" id="senderName" value="sender" readonly>
+                </div>
+                <button onclick="decryptText()" class="btn btn-primary">🔓 Giải mã</button>
+                <div id="textResult"></div>
+            </section>
+
+            <hr>
+
+            <!-- Giải mã File -->
+            <section class="section">
+                <h2>📁 Giải mã File</h2>
+                <div class="form-group">
+                    <label>File mã hóa (JSON):</label>
+                    <textarea id="encryptedFile" placeholder="Dán dữ liệu file mã hóa..."></textarea>
+                </div>
+                <button onclick="decryptFile()" class="btn btn-primary">🔓 Giải mã File</button>
+                <div id="fileResult"></div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+
+        async function decryptText() {
+            const encrypted = document.getElementById('encryptedMessage').value;
+            const signature = document.getElementById('signature').value;
+            const senderName = document.getElementById('senderName').value;
+
+            if (!encrypted || !signature) {
+                alert('Vui lòng điền đầy đủ thông tin');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/decrypt-text`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ encrypted, signature, senderName })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displayTextResult(data);
+                } else {
+                    alert('Lỗi: ' + data.error);
+                }
+            } catch (error) {
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        async function decryptFile() {
+            const fileData = document.getElementById('encryptedFile').value;
+
+            if (!fileData) {
+                alert('Vui lòng dán dữ liệu file');
+                return;
+            }
+
+            try {
+                const parsedData = JSON.parse(fileData);
+                const response = await fetch(`${API_URL}/api/decrypt-file`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(parsedData)
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displayFileResult(data);
+                } else {
+                    alert('Lỗi: ' + data.error);
+                }
+            } catch (error) {
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        function displayTextResult(data) {
+            const resultDiv = document.getElementById('textResult');
+            const statusClass = data.isValid ? 'success' : 'error';
+            resultDiv.innerHTML = `
+                <div class="result ${statusClass}">
+                    <h3>${data.message}</h3>
+                    <p><strong>Tin nhắn gốc:</strong></p>
+                    <textarea readonly>${data.decrypted}</textarea>
+                    <p><strong>Xác thực:</strong> ${data.isValid ? '✅ Hợp lệ' : '❌ Không hợp lệ'}</p>
+                </div>
+            `;
+        }
+
+        function displayFileResult(data) {
+            const resultDiv = document.getElementById('fileResult');
+            resultDiv.innerHTML = `
+                <div class="result success">
+                    <h3>${data.message}</h3>
+                    <p><strong>Tên file:</strong> ${data.fileName}</p>
+                    <p><strong>Nội dung file:</strong></p>
+                    <textarea readonly>${data.fileContent}</textarea>
+                    <button onclick="downloadFile('${data.fileContent.replace(/'/g, "\\'").replace(/"/g, '\\"')}', '${data.fileName}')" class="btn btn-secondary">📥 Tải file</button>
+                </div>
+            `;
+        }
+
+        function downloadFile(content, fileName) {
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+            element.setAttribute('download', fileName);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+    </script>
+</body>
+</html>
